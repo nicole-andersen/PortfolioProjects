@@ -2,8 +2,20 @@
 
 -- Link to data: https://www.kaggle.com/datasets/yuanchunhong/us-supply-chain-risk-analysis-dataset
 
+SELECT * 
+FROM supply_raw;
+
+CREATE TABLE supply_staging
+LIKE supply_raw;
+
+INSERT supply_staging
+SELECT * 
+FROM supply_raw;
+
 SELECT *
 FROM supply_staging;
+
+
 
 -- Verify data cleaning and normalization
 
@@ -34,14 +46,20 @@ MODIFY COLUMN `Dispatch_Date` DATE;
 ALTER TABLE supply_staging
 MODIFY COLUMN `Delivery_Date` DATE;
 
--- Explore trends
 
-SELECT Product_Category, Quantity_Ordered, Shipping_Mode, Order_Value_USD, Disruption_Type, 
-Disruption_Severity, Historical_Disruption_Count, Supplier_Reliability_Score
+
+-- Explore trends in shipping mode
+
+SELECT *
 FROM supply_staging;
 
-SELECT Product_Category, Quantity_Ordered, Shipping_Mode, Order_Value_USD, Disruption_Type, 
-Disruption_Severity, Historical_Disruption_Count, Supplier_Reliability_Score
+SELECT Product_Category, Quantity_Ordered, Order_Date, Dispatch_Date, Delivery_Date, Shipping_Mode, Order_Value_USD, 
+Delay_Days, Disruption_Type, Disruption_Severity, Historical_Disruption_Count, Supplier_Reliability_Score
+FROM supply_staging
+ORDER BY Delay_Days, Disruption_Severity;
+
+SELECT Product_Category, Quantity_Ordered, Order_Date, Dispatch_Date, Delivery_Date, Shipping_Mode, Order_Value_USD, 
+Delay_Days, Disruption_Type, Disruption_Severity, Historical_Disruption_Count, Supplier_Reliability_Score
 FROM supply_staging
 ORDER BY Historical_Disruption_Count DESC;
 
@@ -58,10 +76,19 @@ FROM supply_staging
 WHERE Disruption_Severity = 'High'
 GROUP BY Shipping_Mode;
 
--- The shipping modes are fairly equal in supplier reliability score and historical disruption count, with Sea having slightly higher reliability. 
+SELECT Product_Category, Shipping_Mode, SUM(Delay_Days) AS Total_Delay_Days, SUM(Historical_Disruption_Count) AS Total_Disruptions, 
+COUNT(Quantity_Ordered) AS Total_Orders, (SUM(Delay_Days)/COUNT(Product_Category)) AS Avg_Delay_Per_Order
+FROM supply_staging
+GROUP BY Product_Category, Shipping_Mode
+ORDER BY Shipping_Mode, Total_Orders DESC
+;
 
-SELECT Product_Category, Quantity_Ordered, Shipping_Mode, Order_Value_USD, Disruption_Type, 
-Disruption_Severity, Historical_Disruption_Count, Supplier_Reliability_Score
+
+
+-- Explore industries most impacted by supply chain delays
+
+SELECT Product_Category, Quantity_Ordered, Order_Date, Dispatch_Date, Delivery_Date, Shipping_Mode, Order_Value_USD, 
+Delay_Days, Disruption_Type, Disruption_Severity, Historical_Disruption_Count, Supplier_Reliability_Score
 FROM supply_staging;
 
 SELECT Product_Category, AVG(Supplier_Reliability_Score)
@@ -93,13 +120,29 @@ GROUP BY Disruption_Type;
 SELECT Shipping_Mode, COUNT(Shipping_Mode)
 FROM supply_staging
 WHERE Product_Category = 'Food'
-GROUP BY Shipping_Mode
-;
+GROUP BY Shipping_Mode;
 
--- Pharma has the highest reliability and the supply chain is most likely to be impacted by weather. Air is the primary form of transport.
--- Food has the lowest reliability and is impacted by strike. 
--- Textiles and electronics are more likely to have "severe" disruptions. Textiles are primarily impacted by customs, which electronics and impacted by shortages.
--- While shortage and weather are common distruptions, customs and strike tend to be more severe. 
+SELECT Product_Category, (SUM(Delay_Days)/COUNT(Product_Category))
+FROM supply_staging
+GROUP BY Product_Category;
+
+SELECT Product_Category, Disruption_Type, SUM(Delay_Days) AS Total_Delay_Days, SUM(Historical_Disruption_Count) AS Total_Disruptions, 
+COUNT(Quantity_Ordered) AS Total_Orders, (SUM(Delay_Days)/COUNT(Product_Category)) AS Avg_Delay_Per_Order
+FROM supply_staging
+GROUP BY Product_Category, Disruption_Type
+ORDER BY Disruption_Type, SUM(Delay_Days) DESC;
+
+SELECT Product_Category, Disruption_Type, SUM(Delay_Days) AS Total_Delay_Days, SUM(Historical_Disruption_Count) AS Total_Disruptions, 
+COUNT(Quantity_Ordered) AS Total_Orders, (SUM(Delay_Days)/COUNT(Product_Category)) AS Avg_Delay_Per_Order
+FROM supply_staging
+GROUP BY Product_Category, Disruption_Type
+ORDER BY Product_Category, SUM(Delay_Days) DESC;
+
+SELECT Product_Category, SUM(Delay_Days)
+FROM supply_staging
+GROUP BY Product_Category;
+
+
 
 
 
